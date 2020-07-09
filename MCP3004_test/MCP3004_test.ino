@@ -18,7 +18,7 @@ hw_timer_t * samplingTimer = NULL;
 const int MCP3004_CS = 2;
 MCP3004 mcp3004(MCP3004_CS);
 
-const float rl = 51.0; // Load Resistance
+const float rl = 51.0;  // 負荷抵抗
 
 struct amp {
     short amp_ch[4];
@@ -26,22 +26,20 @@ struct amp {
 
 volatile int t0flag;
 
-void IRAM_ATTR onTimer0() {
+void IRAM_ATTR onTimer0() {  // タイマ割込関数
     t0flag = 1;
 }
 
-// chのチャネルをサンプリングする
-
-void ampRead(uint8_t ch) {
-    timerAlarmEnable(samplingTimer);
+void ampRead(uint8_t ch) {  // chのチャネルをサンプリングする
+    timerAlarmEnable(samplingTimer);  // タイマを動かす
     for (int i = 0; i < SAMPLE_SIZE; i++) {
         t0flag = 0;
-        while (t0flag == 0) {
+        while (t0flag == 0) {  // タイマでt0flagが1になるのを待つ
             delay(0);
         }
-        amps[i].amp_ch[ch] = mcp3004.read(ch);
+        amps[i].amp_ch[ch] = mcp3004.read(ch);  // chの電圧値を測る
     }
-    timerAlarmDisable(samplingTimer);
+    timerAlarmDisable(samplingTimer);  // タイマを止める
 }
 
 void setup(){
@@ -49,17 +47,16 @@ void setup(){
 
     Serial.begin(115200);
     while (!Serial);
-    SPI.begin();
+    SPI.begin();  // SPIを初期化
+    mcp3004.begin();  // MCP3004のオブジェクトを初期化
 
-    mcp3004.begin();
-
-    samplingTimer = timerBegin(TIMER0, 80, true);
-    timerAttachInterrupt(samplingTimer, &onTimer0, true);
-    timerAlarmWrite(samplingTimer, SAMPLE_PERIOD * 1000, true);
+    samplingTimer = timerBegin(TIMER0, 80, true);  // 分周比80、1μ秒のタイマを作る
+    timerAttachInterrupt(samplingTimer, &onTimer0, true);  // タイマ割込みハンドラを指定
+    timerAlarmWrite(samplingTimer, SAMPLE_PERIOD * 1000, true);  // タイマ周期を設定
 }
 
 void loop() {
-    ampRead(0);
+    ampRead(0);  // チャネル0をサンプリング
     for (int i = 0; i < SAMPLE_SIZE; i++) {
         Serial.println(amps[i].amp_ch[0]);
     }
